@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Office Presence Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f4; --bg3: #eeede9;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #9a9a96;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+    --blue: #185FA5; --blue-bg: #E6F1FB; --blue-text: #0C447C;
+    --green: #0F6E56; --green-bg: #E1F5EE; --green-text: #085041;
+    --amber-bg: #FAEEDA; --amber-text: #633806;
+    --purple-bg: #EEEDFE; --purple-text: #3C3489;
+    --coral-bg: #FAECE7; --coral-text: #993C1D;
+    --red: #A32D2D; --red-bg: #FCEBEB; --red-text: #501313;
+    --edit-bg: #EAF3DE; --edit-text: #3B6D11;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b;
+      --text: #f0ede8; --text2: #a09d98; --text3: #6e6b67;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --blue-bg: #0c2d4e; --blue-text: #85B7EB;
+      --green-bg: #042e24; --green-text: #5DCAA5;
+      --amber-bg: #2e1e04; --amber-text: #FAC775;
+      --purple-bg: #1a1840; --purple-text: #AFA9EC;
+      --coral-bg: #2e1208; --coral-text: #F0997B;
+      --red-bg: #2e1010; --red-text: #F09595;
+      --edit-bg: #182808; --edit-text: #97C459;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+  .app { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  header { margin-bottom: 1.5rem; }
+  header h1 { font-size: 20px; font-weight: 600; margin-bottom: 3px; }
+  header p { font-size: 13px; color: var(--text2); }
+  .tabs { display: flex; background: var(--bg2); border-radius: var(--radius-lg); padding: 4px; gap: 3px; margin-bottom: 1.25rem; }
+  .tab { flex: 1; padding: 8px 4px; font-size: 13px; border: none; background: none; cursor: pointer; color: var(--text2); border-radius: var(--radius); font-weight: 500; transition: all 0.15s; }
+  .tab.active { background: var(--bg); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; margin-bottom: 0.9rem; }
+  .label { font-size: 11px; color: var(--text2); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; font-weight: 500; }
+  .name-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .office-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .sel-btn { padding: 9px 11px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg2); cursor: pointer; font-size: 13px; text-align: left; color: var(--text); transition: all 0.1s; }
+  .sel-btn:hover { border-color: var(--border2); }
+  .sel-btn.sel-name.active { border-color: var(--blue); background: var(--blue-bg); color: var(--blue-text); font-weight: 600; }
+  .sel-btn.sel-office.active { border-color: var(--green); background: var(--green-bg); color: var(--green-text); font-weight: 600; }
+  .dt-bar { display: flex; align-items: center; gap: 10px; }
+  .dt-display { font-size: 13px; color: var(--text2); flex: 1; }
+  .dt-toggle { font-size: 12px; color: var(--blue); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+  .dt-inputs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .retro-note { font-size: 12px; margin-top: 7px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  textarea, input[type=text], input[type=date], input[type=time], input[type=password], select {
+    border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg2);
+    color: var(--text); font-family: inherit; font-size: 13px; padding: 8px 10px; outline: none; width: 100%;
+  }
+  textarea { resize: none; }
+  input[type=date], input[type=time] { width: auto; }
+  input:focus, textarea:focus, select:focus { border-color: var(--border2); }
+  .primary-btn { width: 100%; padding: 11px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .primary-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .notice { border-radius: var(--radius); padding: 10px 13px; font-size: 13px; margin-top: 10px; display: none; }
+  .notice.ok { background: var(--green-bg); border: 0.5px solid #5DCAA5; color: var(--green-text); }
+  .notice.warn { background: var(--amber-bg); border: 0.5px solid #EF9F27; color: var(--amber-text); }
+  .notice.err { background: var(--red-bg); border: 0.5px solid #F09595; color: var(--red-text); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .b-retro { background: var(--coral-bg); color: var(--coral-text); }
+  .b-edit  { background: var(--edit-bg); color: var(--edit-text); }
+  /* Checkout bar */
+  .checkout-bar { background: var(--green-bg); border: 0.5px solid #5DCAA5; border-radius: var(--radius-lg); padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .checkout-bar-left { flex: 1; min-width: 0; }
+  .checkout-bar-status { font-size: 11px; font-weight: 600; color: var(--green-text); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 2px; }
+  .checkout-bar-who { font-size: 15px; font-weight: 600; color: var(--green-text); margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .checkout-bar-detail { font-size: 12px; color: var(--green-text); opacity: 0.75; }
+  .checkout-bar-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .checkout-bar-elapsed { font-size: 22px; font-weight: 700; color: var(--green-text); font-variant-numeric: tabular-nums; line-height: 1; }
+  .checkout-bar-btn { padding: 8px 18px; background: var(--green); color: #fff; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .checkout-bar-btn:hover { opacity: 0.88; }
+  .b-duration { background: var(--green-bg); color: var(--green-text); }
+  /* Dashboard */
+  .metric-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; margin-bottom: 0.9rem; }
+  .metric { background: var(--bg2); border-radius: var(--radius); padding: 11px 13px; }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+  .metric-value { font-size: 22px; font-weight: 600; }
+  .bar-row { margin-bottom: 9px; }
+  .bar-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+  .bar-track { height: 6px; background: var(--bg2); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+  .person-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 0.5px solid var(--border); gap: 8px; }
+  .person-row:last-child { border-bottom: none; }
+  /* Log table */
+  .log-wrap { overflow-x: auto; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: var(--bg); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text2); padding: 9px 8px; border-bottom: 0.5px solid var(--border); letter-spacing: 0.04em; text-transform: uppercase; }
+  td { padding: 8px; border-bottom: 0.5px solid var(--border); vertical-align: top; word-break: break-word; }
+  tr:last-child td { border-bottom: none; }
+  tr.editing td { border-bottom: none; background: var(--bg2); }
+  .edit-panel { padding: 10px; }
+  .edit-fields { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ef { display: flex; flex-direction: column; gap: 3px; }
+  .ef label { font-size: 11px; color: var(--text2); font-weight: 500; }
+  .ef input, .ef select { font-size: 13px; padding: 6px 8px; width: auto; }
+  .ef.grow { flex: 1; min-width: 160px; }
+  .ef.grow input { width: 100%; }
+  .edit-actions { display: flex; gap: 7px; margin-top: 10px; }
+  .btn-sm { padding: 6px 13px; border-radius: var(--radius); font-size: 13px; cursor: pointer; font-weight: 500; }
+  .btn-primary { background: var(--text); color: var(--bg); border: none; }
+  .btn-outline { background: var(--bg); color: var(--text); border: 0.5px solid var(--border2); }
+  .btn-danger { background: var(--red); color: #fff; border: none; }
+  .icon-btn { background: none; border: none; cursor: pointer; padding: 4px 5px; border-radius: var(--radius); font-size: 14px; opacity: 0.55; transition: opacity 0.1s; }
+  .icon-btn:hover { opacity: 1; background: var(--bg2); }
+  .confirm-bar { display: flex; align-items: center; gap: 7px; padding: 6px 8px; background: var(--red-bg); border-radius: var(--radius); margin-top: 5px; font-size: 12px; color: var(--red-text); }
+  .empty { text-align: center; padding: 2.5rem 1rem; color: var(--text2); font-size: 13px; }
+  /* Settings */
+  .settings-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 0.5px solid var(--border); }
+  .settings-item:last-child { border-bottom: none; }
+  .settings-item span { flex: 1; font-size: 13px; }
+  .settings-item input[type=text] { flex: 1; padding: 5px 8px; }
+  .add-row { display: flex; gap: 7px; margin-top: 10px; }
+  .add-row input { flex: 1; }
+  .add-btn { padding: 8px 14px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); font-size: 13px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+  .flash { font-size: 12px; color: var(--green-text); margin-top: 5px; display: none; }
+  /* App login screen */
+  .login-screen { position: fixed; inset: 0; background: var(--bg3); display: flex; align-items: center; justify-content: center; z-index: 200; }
+  .login-box { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2rem 1.75rem; width: 320px; text-align: center; }
+  .login-box .login-icon { font-size: 32px; margin-bottom: 12px; }
+  .login-box h2 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  .login-box .login-sub { font-size: 12px; color: var(--text2); margin-bottom: 20px; }
+  .login-box input { text-align: center; font-size: 15px; margin-bottom: 10px; letter-spacing: 0.05em; }
+  .login-box .login-err { font-size: 12px; color: var(--red-text); margin-bottom: 8px; min-height: 16px; }
+  .login-box .login-btn { width: 100%; padding: 10px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; }
+  .login-attempts { font-size: 11px; color: var(--text3); margin-top: 8px; }
+  /* PIN overlay */
+  .pin-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .pin-box { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; width: 280px; text-align: center; }
+  .pin-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .pin-box p { font-size: 12px; color: var(--text2); margin-bottom: 14px; }
+  .pin-box input { text-align: center; letter-spacing: 0.2em; font-size: 20px; margin-bottom: 10px; }
+  .pin-box .pin-err { font-size: 12px; color: var(--red-text); margin-bottom: 8px; display: none; }
+  /* Webhook banner */
+  .webhook-banner { background: var(--amber-bg); border: 0.5px solid #EF9F27; border-radius: var(--radius); padding: 10px 13px; font-size: 12px; color: var(--amber-text); margin-bottom: 0.9rem; display: flex; align-items: flex-start; gap: 8px; }
+  .webhook-banner a { color: var(--amber-text); font-weight: 600; }
+  /* Heatmap */
+  .heatmap { display: flex; flex-wrap: wrap; gap: 4px; }
+  .hm-day { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text3); cursor: default; }
+  /* Office badge colors — cycled by index */
+  .ob-0 { background: var(--blue-bg); color: var(--blue-text); }
+  .ob-1 { background: var(--amber-bg); color: var(--amber-text); }
+  .ob-2 { background: var(--purple-bg); color: var(--purple-text); }
+  .ob-3 { background: var(--green-bg); color: var(--green-text); }
+  .ob-4 { background: var(--coral-bg); color: var(--coral-text); }
+  @media (max-width: 480px) {
+    .name-grid { grid-template-columns: 1fr; }
+    .metric-grid { grid-template-columns: 1fr 1fr; }
+    .tabs .tab { font-size: 11px; padding: 7px 2px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Office presence tracker</h1>
+    <p id="subtitle">Loading…</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('checkin')">Check in</button>
+    <button class="tab" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="tab" onclick="switchTab('log')">Log</button>
+    <button class="tab" onclick="switchTab('settings')">⚙ Settings</button>
+  </div>
+
+  <!-- ── CHECK IN ── -->
+  <div id="tab-checkin">
+    <div id="webhook-banner" class="webhook-banner" style="display:none">
+      ⚠ Power Automate webhook not configured. Data is saved locally only.
+      Go to <strong>⚙ Settings → Integrations</strong> to add your webhook URL.
+    </div>
+    <div class="card">
+      <div class="label">Who are you?</div>
+      <div class="name-grid" id="name-grid"></div>
+      <div id="name-empty" style="display:none;font-size:13px;color:var(--text2)">No team members yet — add them in ⚙ Settings.</div>
+    </div>
+    <div class="card">
+      <div class="label">Which office?</div>
+      <div class="office-grid" id="office-grid"></div>
+      <div id="office-empty" style="display:none;font-size:13px;color:var(--text2)">No offices yet — add them in ⚙ Settings.</div>
+    </div>
+    <div class="card">
+      <div class="dt-bar">
+        <div class="label" style="margin:0">Date &amp; time of visit</div>
+        <span class="dt-toggle" id="dt-toggle" onclick="toggleManual()">Edit manually</span>
+      </div>
+      <div class="dt-display" id="dt-auto" style="margin-top:8px"></div>
+      <div id="dt-manual" style="display:none">
+        <div class="dt-inputs">
+          <input type="date" id="manual-date" onchange="checkRetro()" style="width:auto" />
+          <input type="time" id="manual-time" style="width:auto" />
+        </div>
+        <div class="retro-note" id="retro-note"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Reason / notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(optional)</span></div>
+      <textarea id="notes-input" rows="2" placeholder="e.g. Lab setup, customer demo, team sync…"></textarea>
+    </div>
+    <!-- Checkout bar (shown at top once checked in) -->
+    <div id="checkout-state" style="display:none;margin-bottom:0.9rem">
+      <div class="checkout-bar">
+        <div class="checkout-bar-left">
+          <div class="checkout-bar-status">● Checked in</div>
+          <div class="checkout-bar-who" id="co-who"></div>
+          <div class="checkout-bar-detail" id="co-where"></div>
+        </div>
+        <div class="checkout-bar-right">
+          <div class="checkout-bar-elapsed" id="co-elapsed">0h 00m</div>
+          <button class="checkout-bar-btn" onclick="doCheckout()">Check out</button>
+        </div>
+      </div>
+    </div>
+    <!-- Normal check-in form -->
+    <div id="checkin-form">
+      <button class="primary-btn" id="checkin-btn" onclick="doCheckin()" disabled>Check in</button>
+    </div>
+    <div class="notice" id="notice"></div>
+  </div>
+
+  <!-- ── DASHBOARD ── -->
+  <div id="tab-dashboard" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">
+      <span style="font-size:13px;color:var(--text2)">Month:</span>
+      <select id="month-sel" onchange="renderDashboard()" style="width:auto"></select>
+    </div>
+    <div class="metric-grid">
+      <div class="metric"><div class="metric-label">Total visits</div><div class="metric-value" id="m-total">0</div></div>
+      <div class="metric"><div class="metric-label">Team members</div><div class="metric-value" id="m-people">0</div></div>
+      <div class="metric"><div class="metric-label">Avg days/person</div><div class="metric-value" id="m-avg">0</div></div>
+    </div>
+    <div class="card">
+      <div class="label" style="margin-bottom:12px">Visits by office</div>
+      <div id="office-bars"></div>
+    </div>
+    <div class="card">
+      <div class="label" style="margin-bottom:12px">Visits by person</div>
+      <div id="person-bars"></div>
+    </div>
+    <div class="card">
+      <div class="label" style="margin-bottom:12px">Daily activity</div>
+      <div class="heatmap" id="heatmap"></div>
+    </div>
+  </div>
+
+  <!-- ── LOG ── -->
+  <div id="tab-log" style="display:none">
+    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <select id="fp" onchange="renderLog()" style="width:auto"><option value="">All people</option></select>
+      <select id="fo" onchange="renderLog()" style="width:auto"><option value="">All offices</option></select>
+      <button onclick="exportCSV()" style="margin-left:auto;padding:6px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);cursor:pointer;color:var(--text);font-size:12px;font-weight:500">Export report + log</button>
+    </div>
+    <div class="log-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:82px">Visit date</th>
+          <th style="width:88px">Name</th>
+          <th style="width:72px">Office</th>
+          <th style="width:70px">Duration</th>
+          <th>Notes</th>
+          <th style="width:88px">Submitted</th>
+          <th style="width:54px"></th>
+        </tr></thead>
+        <tbody id="log-body"></tbody>
+      </table>
+      <div class="empty" id="log-empty" style="display:none">No entries yet — check in to get started!</div>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS ── -->
+  <div id="tab-settings" style="display:none">
+    <!-- Team members -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px">Team members</div>
+      <div id="people-list"></div>
+      <div class="add-row">
+        <input type="text" id="add-person" placeholder="Full name…" onkeydown="if(event.key==='Enter')addPerson()" />
+        <select id="add-person-office" style="width:auto"></select>
+        <button class="add-btn" onclick="addPerson()">Add</button>
+      </div>
+      <div class="flash" id="people-flash">Saved ✓</div>
+    </div>
+    <!-- Offices -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px">Office locations</div>
+      <div id="office-list"></div>
+      <div class="add-row">
+        <input type="text" id="add-office" placeholder="Office / location name…" onkeydown="if(event.key==='Enter')addOffice()" />
+        <button class="add-btn" onclick="addOffice()">Add</button>
+      </div>
+      <div class="flash" id="office-flash">Saved ✓</div>
+    </div>
+    <!-- Power Automate integration -->
+    <div class="card">
+      <div class="label" style="margin-bottom:4px">Power Automate webhook</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+        Each check-in will POST a JSON row to this URL, which you route into Excel Online via Power Automate.
+        See the <strong>setup guide</strong> below.
+      </p>
+      <input type="text" id="webhook-url" placeholder="https://prod-xx.westeurope.logic.azure.com/workflows/…" style="font-size:12px" />
+      <button onclick="saveWebhook()" style="margin-top:8px;padding:7px 14px;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);font-size:13px;cursor:pointer;font-weight:600">Save webhook URL</button>
+      <div class="flash" id="webhook-flash">Saved ✓</div>
+    </div>
+    <!-- PIN -->
+    <div class="card">
+      <div class="label" style="margin-bottom:4px">Admin PIN</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Change the PIN required to access Settings. Default is <strong>1234</strong> — change it before sharing the app.</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="password" id="new-pin" placeholder="New PIN (4–8 digits)" style="width:180px" maxlength="8" />
+        <input type="password" id="new-pin2" placeholder="Confirm PIN" style="width:180px" maxlength="8" />
+        <button onclick="changePin()" style="padding:7px 14px;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);font-size:13px;cursor:pointer;font-weight:600">Update PIN</button>
+      </div>
+      <div class="flash" id="pin-flash">PIN updated ✓</div>
+      <div style="font-size:12px;color:var(--red-text);margin-top:6px;display:none" id="pin-err"></div>
+    </div>
+    <!-- App password -->
+    <div class="card">
+      <div class="label" style="margin-bottom:4px">App password</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">This is the password everyone on the team uses to open the app. Default is <strong>field2024</strong> — change it before sharing the URL.</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="password" id="new-apppass" placeholder="New password" style="width:180px" />
+        <input type="password" id="new-apppass2" placeholder="Confirm password" style="width:180px" />
+        <button onclick="changeAppPassword()" style="padding:7px 14px;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);font-size:13px;cursor:pointer;font-weight:600">Update</button>
+      </div>
+      <div class="flash" id="apppass-flash">App password updated ✓</div>
+      <div style="font-size:12px;color:var(--red-text);margin-top:6px;display:none" id="apppass-err"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border)">
+        <button onclick="signOut()" style="padding:7px 14px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:13px;cursor:pointer;color:var(--text2)">Sign out</button>
+        <span style="font-size:12px;color:var(--text3);margin-left:10px">Signs out this browser session</span>
+      </div>
+    </div>
+    <!-- Setup guide -->
+    <div class="card" style="background:var(--bg2)">
+      <div class="label" style="margin-bottom:10px">📋 Power Automate setup guide</div>
+      <ol style="font-size:13px;line-height:2;padding-left:1.2rem;color:var(--text2)">
+        <li>Go to <strong style="color:var(--text)">make.powerautomate.com</strong> and sign in with your M365 account.</li>
+        <li>Click <strong style="color:var(--text)">Create → Instant cloud flow</strong>.</li>
+        <li>Choose trigger: <strong style="color:var(--text)">When an HTTP request is received</strong>. Click Create.</li>
+        <li>In the trigger, paste this JSON schema into <em>Request Body JSON Schema</em>:
+          <pre id="json-schema" style="background:var(--bg3);border-radius:var(--radius);padding:10px;font-size:11px;margin-top:6px;overflow-x:auto;white-space:pre-wrap;line-height:1.5;color:var(--text)">{
+  "type": "object",
+  "properties": {
+    "date":          { "type": "string" },
+    "time":          { "type": "string" },
+    "name":          { "type": "string" },
+    "office":        { "type": "string" },
+    "notes":         { "type": "string" },
+    "submittedDate": { "type": "string" },
+    "submittedTime": { "type": "string" },
+    "retroactive":   { "type": "string" }
+  }
+}</pre>
+          <button onclick="copySchema()" style="margin-top:5px;padding:4px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);font-size:12px;cursor:pointer;color:var(--text)">Copy schema</button>
+        </li>
+        <li>Add a new step: <strong style="color:var(--text)">Add a row into a table</strong> (Excel Online / Business).</li>
+        <li>Select your SharePoint site, the Excel file, and the table. Map each column to the matching field from the trigger body.</li>
+        <li>Save the flow. Copy the <strong style="color:var(--text)">HTTP POST URL</strong> from the trigger step.</li>
+        <li>Paste that URL into the <strong style="color:var(--text)">Webhook URL</strong> field above and click Save.</li>
+      </ol>
+      <p style="font-size:12px;color:var(--text3);margin-top:10px">💡 Tip: In your Excel file, create a table with columns: Date, Time, Name, Office, Notes, Submitted Date, Submitted Time, Retroactive.</p>
+    </div>
+    <p style="font-size:12px;color:var(--text3);padding:4px 2px">Renaming or removing people/offices does not alter existing log entries.</p>
+  </div>
+</div>
+
+<!-- PIN overlay -->
+<!-- App login screen -->
+<div class="login-screen" id="login-screen" style="display:none">
+  <div class="login-box">
+    <div class="login-icon">🏢</div>
+    <h2>Office Presence Tracker</h2>
+    <p class="login-sub">Enter the team password to continue.<br><span id="login-default-hint" style="color:var(--text3)"></span></p>
+    <input type="password" id="login-input" placeholder="Password" maxlength="64"
+      onkeydown="if(event.key==='Enter')checkLogin()" />
+    <div class="login-err" id="login-err"></div>
+    <button class="login-btn" onclick="checkLogin()">Sign in</button>
+    <div class="login-attempts" id="login-attempts" style="font-size:12px;color:var(--text2);margin-top:10px;min-height:16px"></div>
+  </div>
+</div>
+
+<div class="pin-overlay" id="pin-overlay" style="display:none">
+  <div class="pin-box">
+    <h3>Admin access</h3>
+    <p>Enter the admin PIN to access Settings.</p>
+    <input type="password" id="pin-input" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter')checkPin()" />
+    <div class="pin-err" id="pin-err-msg">Incorrect PIN. Try again.</div>
+    <button onclick="checkPin()" style="width:100%;padding:9px;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer">Unlock</button>
+    <button onclick="closePinOverlay()" style="width:100%;margin-top:8px;padding:8px;background:none;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:13px;cursor:pointer;color:var(--text2)">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let people = [], offices = [], entries = [], manualMode = false, editingId = null;
+let webhookUrl = '', adminPin = '1234', settingsUnlocked = false;
+let appPassword = 'field2024', appUnlocked = false, loginAttempts = 0;
+let activeCheckin = null; // { entryId, name, office, checkInTime } for today's active session
+let elapsedTimer = null;
+const MAX_ATTEMPTS = 5;
+
+const OFF_COLORS = ['#378ADD','#EF9F27','#7F77DD','#1D9E75','#D85A30'];
+const OFF_BADGE  = ['ob-0','ob-1','ob-2','ob-3','ob-4'];
+
+// ── App login ─────────────────────────────────────────────────────────
+function checkLogin() {
+  if (loginAttempts >= MAX_ATTEMPTS) return;
+  const val = document.getElementById('login-input').value;
+  if (val === appPassword) {
+    appUnlocked = true;
+    sessionStorage.setItem('opt_session', '1');
+    document.getElementById('login-screen').style.display = 'none';
+    loadData();
+  } else {
+    loginAttempts++;
+    const remaining = MAX_ATTEMPTS - loginAttempts;
+    document.getElementById('login-err').textContent = 'Incorrect password.' + (remaining > 0 ? ' ' + remaining + ' attempt' + (remaining > 1 ? 's' : '') + ' remaining.' : '');
+    document.getElementById('login-input').value = '';
+    if (loginAttempts >= MAX_ATTEMPTS) {
+      document.getElementById('login-input').disabled = true;
+      document.getElementById('login-attempts').textContent = 'Too many attempts. Refresh the page.';
+    }
+  }
+}
+
+// ── Persistence (localStorage) ────────────────────────────────────────
+function load() {
+  // Load app password from storage (falls back to default)
+  appPassword = localStorage.getItem('opt_apppass') || 'field2024';
+  // Show hint so user knows the default on first use
+  const isFirstRun = !localStorage.getItem('opt_apppass');
+  if (isFirstRun) {
+    document.getElementById('login-attempts').textContent = 'First time? Default password is: field2024';
+  }
+  // Check for active session
+  if (sessionStorage.getItem('opt_session') === '1') {
+    appUnlocked = true;
+    document.getElementById('login-screen').style.display = 'none';
+    loadData();
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    setTimeout(() => document.getElementById('login-input').focus(), 150);
+  }
+}
+
+function loadData() {
+  try { people  = JSON.parse(localStorage.getItem('opt_people'))  || defaultPeople(); } catch(e) { people  = defaultPeople(); }
+  try { offices = JSON.parse(localStorage.getItem('opt_offices')) || defaultOffices(); } catch(e) { offices = defaultOffices(); }
+  try { entries = JSON.parse(localStorage.getItem('opt_entries')) || []; } catch(e) { entries = []; }
+  webhookUrl = localStorage.getItem('opt_webhook') || '';
+  adminPin   = localStorage.getItem('opt_pin')     || '1234';
+  renderAll();
+}
+
+function defaultPeople() {
+  return [
+    {name:'Alex M.',   office:'Burgdorf'},
+    {name:'Jordan K.', office:'Burgdorf'},
+    {name:'Sam R.',    office:'Burgdorf'},
+    {name:'Chris T.',  office:'Burgdorf'},
+    {name:'Lee W.',    office:'Geneva'},
+    {name:'Dana P.',   office:'Geneva'},
+    {name:'Morgan B.', office:'Basel'},
+    {name:'Riley O.',  office:'Basel'}
+  ];
+}
+function defaultOffices() { return ['Burgdorf','Geneva','Basel']; }
+
+function saveSettings() {
+  localStorage.setItem('opt_people',  JSON.stringify(people));
+  localStorage.setItem('opt_offices', JSON.stringify(offices));
+}
+function saveEntries() { localStorage.setItem('opt_entries', JSON.stringify(entries)); }
+function saveWebhook() {
+  webhookUrl = document.getElementById('webhook-url').value.trim();
+  localStorage.setItem('opt_webhook', webhookUrl);
+  flash('webhook-flash');
+  document.getElementById('webhook-banner').style.display = webhookUrl ? 'none' : 'flex';
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────
+function nowDateStr() { return new Date().toISOString().slice(0,10); }
+function nowTimeStr() { return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+function fmtDate(d)   { return new Date(d+'T12:00:00').toLocaleDateString([],{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+
+function tick() {
+  if (!manualMode) document.getElementById('dt-auto').textContent = fmtDate(nowDateStr()) + ' · ' + nowTimeStr();
+}
+tick(); setInterval(tick, 15000);
+
+function toggleManual() {
+  manualMode = !manualMode;
+  document.getElementById('dt-manual').style.display = manualMode ? 'block' : 'none';
+  document.getElementById('dt-auto').style.display   = manualMode ? 'none'  : 'block';
+  document.getElementById('dt-toggle').textContent   = manualMode ? 'Use today' : 'Edit manually';
+  if (manualMode) {
+    document.getElementById('manual-date').value = nowDateStr();
+    document.getElementById('manual-time').value = new Date().toTimeString().slice(0,5);
+    checkRetro();
+  }
+}
+
+function checkRetro() {
+  const d = document.getElementById('manual-date').value, today = nowDateStr();
+  const el = document.getElementById('retro-note');
+  if (d && d !== today) {
+    const diff = Math.round((new Date(today) - new Date(d)) / 86400000);
+    el.innerHTML = '<span style="background:var(--amber-bg);color:var(--amber-text);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">Retroactive</span> <span style="color:var(--text2)">submitted today, recorded for ' + (diff > 0 ? diff + ' day' + (diff > 1 ? 's' : '') + ' ago' : 'a future date') + '</span>';
+  } else { el.innerHTML = ''; }
+}
+
+// ── Selection ─────────────────────────────────────────────────────────
+let selName = null, selOffice = null;
+function pick(type, btn, val) {
+  document.querySelectorAll(type === 'name' ? '.sel-name' : '.sel-office').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (type === 'name') selName = val; else selOffice = val;
+  document.getElementById('checkin-btn').disabled = !(selName && selOffice);
+}
+
+// ── Check in ──────────────────────────────────────────────────────────
+async function doCheckin() {
+  const now = new Date();
+  const submitDate = now.toISOString().slice(0,10);
+  const submitTime = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const visitDate  = manualMode ? (document.getElementById('manual-date').value || submitDate) : submitDate;
+  const visitTime  = manualMode ? (document.getElementById('manual-time').value || submitTime) : submitTime;
+  const notes      = document.getElementById('notes-input').value.trim();
+  const isRetro    = visitDate !== submitDate;
+  const notice     = document.getElementById('notice');
+
+  if (entries.find(e => e.date === visitDate && e.name === selName)) {
+    showNotice('warn', selName + ' already has an entry for ' + visitDate + '.');
+    return;
+  }
+
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+    date: visitDate, time: visitTime, name: selName, office: selOffice, notes,
+    submittedDate: submitDate, submittedTime: submitTime,
+    retroactive: isRetro, ts: now.getTime()
+  };
+
+  entries.unshift(entry);
+  entries.sort((a,b) => b.date.localeCompare(a.date) || b.ts - a.ts);
+  saveEntries();
+
+  // Fire webhook
+  if (webhookUrl) {
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: visitDate, time: visitTime, name: selName, office: selOffice,
+          notes, submittedDate: submitDate, submittedTime: submitTime,
+          retroactive: isRetro ? 'yes' : 'no'
+        })
+      });
+    } catch(e) {
+      showNotice('warn', 'Checked in locally but webhook failed: ' + e.message);
+    }
+  }
+
+  showNotice('ok', selName + ' checked in at ' + selOffice + ' · ' + visitDate + ' ' + visitTime +
+    (isRetro ? ' (retroactive, submitted ' + submitDate + ')' : '') +
+    (notes ? ' · "' + notes + '"' : '') +
+    (webhookUrl ? ' · Sent to Excel ✓' : ''));
+
+  document.querySelectorAll('.sel-name,.sel-office').forEach(b => b.classList.remove('active'));
+  document.getElementById('notes-input').value = '';
+  if (manualMode) toggleManual();
+  selName = null; selOffice = null;
+  document.getElementById('checkin-btn').disabled = true;
+  populateMonthFilter(); renderDashboard(); renderLog();
+}
+
+function calcDuration(inTime, outTime) {
+  // inTime/outTime are "HH:MM" strings
+  const [ih,im] = inTime.split(':').map(Number);
+  const [oh,om] = outTime.split(':').map(Number);
+  const mins = (oh*60+om) - (ih*60+im);
+  if (mins <= 0) return null;
+  const h = Math.floor(mins/60), m = mins%60;
+  return h > 0 ? h+'h '+(m<10?'0':'')+m+'m' : m+'m';
+}
+
+function startElapsedTimer(checkInTime) {
+  if (elapsedTimer) clearInterval(elapsedTimer);
+  function update() {
+    const now = new Date();
+    const nowMins = now.getHours()*60 + now.getMinutes();
+    const [ih,im] = checkInTime.split(':').map(Number);
+    const diff = nowMins - (ih*60+im);
+    if (diff < 0) { document.getElementById('co-elapsed').textContent = '—'; return; }
+    const h = Math.floor(diff/60), m = diff%60;
+    document.getElementById('co-elapsed').textContent = h+'h '+(m<10?'0':'')+m+'m';
+  }
+  update(); elapsedTimer = setInterval(update, 30000);
+}
+
+function setCheckinState(entry) {
+  // entry = the entry object, or null to clear
+  activeCheckin = entry;
+  const form = document.getElementById('checkin-form');
+  const coState = document.getElementById('checkout-state');
+  if (entry) {
+    document.getElementById('co-who').textContent = entry.name;
+    document.getElementById('co-where').textContent = entry.office + ' · checked in at ' + entry.time;
+    form.style.display = 'none';
+    coState.style.display = 'block';
+    startElapsedTimer(entry.time);
+  } else {
+    form.style.display = 'block';
+    coState.style.display = 'none';
+    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+  }
+}
+
+function detectTodayCheckin() {
+  const today = nowDateStr();
+  // Find today's entry that has no checkout yet
+  const entry = entries.find(e => e.date === today && !e.checkoutTime);
+  setCheckinState(entry || null);
+}
+
+async function doCheckout() {
+  if (!activeCheckin) return;
+  const now = new Date();
+  const checkoutTime = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const duration = calcDuration(activeCheckin.time, checkoutTime);
+  const idx = entries.findIndex(e => e.id === activeCheckin.id);
+  if (idx >= 0) {
+    entries[idx].checkoutTime = checkoutTime;
+    entries[idx].duration = duration;
+    saveEntries();
+    renderDashboard(); renderLog();
+  }
+  showNotice('ok', 'Checked out at ' + checkoutTime + (duration ? ' · Time in office: ' + duration : ''));
+  setCheckinState(null);
+}
+
+function showNotice(type, msg) {
+  const el = document.getElementById('notice');
+  el.className = 'notice ' + type;
+  el.style.display = 'block';
+  el.textContent = msg;
+}
+
+// ── Render helpers ─────────────────────────────────────────────────────
+function offClass(name) { const i = offices.indexOf(name); return OFF_BADGE[Math.max(0,i) % OFF_BADGE.length]; }
+function barColor(i)    { return OFF_COLORS[i % OFF_COLORS.length]; }
+function monthKey(d)    { return d.slice(0,7); }
+
+function renderAll() {
+  renderNameGrid(); renderOfficeGrid();
+  renderLogFilters(); renderPeopleSettings(); renderOfficeSettings();
+  populateMonthFilter(); renderDashboard(); renderLog();
+  updateSubtitle();
+  document.getElementById('webhook-url').value = webhookUrl;
+  document.getElementById('webhook-banner').style.display = webhookUrl ? 'none' : 'flex';
+  selName = null; selOffice = null;
+  document.getElementById('checkin-btn').disabled = true;
+  detectTodayCheckin();
+}
+
+function updateSubtitle() {
+  const parts = offices.map(o => { const c = people.filter(p => p.office === o).length; return o + (c ? ' (' + c + ')' : ''); });
+  document.getElementById('subtitle').textContent = parts.join(' · ') || 'Configure in ⚙ Settings';
+}
+
+function renderNameGrid() {
+  const g = document.getElementById('name-grid'), e = document.getElementById('name-empty');
+  if (!people.length) { g.style.display = 'none'; e.style.display = 'block'; return; }
+  g.style.display = 'grid'; e.style.display = 'none';
+  g.innerHTML = people.map(p => {
+    const sub = p.office ? ` <span style="font-size:11px;color:var(--text3)">(${p.office})</span>` : '';
+    const safe = p.name.replace(/'/g,"\\'");
+    return `<button class="sel-btn sel-name" onclick="pick('name',this,'${safe}')">${p.name}${sub}</button>`;
+  }).join('');
+}
+
+function renderOfficeGrid() {
+  const g = document.getElementById('office-grid'), e = document.getElementById('office-empty');
+  if (!offices.length) { g.style.display = 'none'; e.style.display = 'block'; return; }
+  g.style.display = 'grid'; e.style.display = 'none';
+  g.innerHTML = offices.map(o => `<button class="sel-btn sel-office" onclick="pick('office',this,'${o.replace(/'/g,"\\'")}')"> ${o}</button>`).join('');
+}
+
+function renderLogFilters() {
+  const fp = document.getElementById('fp'), fo = document.getElementById('fo');
+  const pv = fp.value, ov = fo.value;
+  fp.innerHTML = '<option value="">All people</option>' + people.map(p => `<option>${p.name}</option>`).join('');
+  fo.innerHTML = '<option value="">All offices</option>' + offices.map(o => `<option>${o}</option>`).join('');
+  fp.value = pv; fo.value = ov;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────
+function populateMonthFilter() {
+  const sel = document.getElementById('month-sel');
+  const months = [...new Set(entries.map(e => monthKey(e.date)))].sort().reverse();
+  const cur = nowDateStr().slice(0,7);
+  if (!months.includes(cur)) months.unshift(cur);
+  const prev = sel.value;
+  sel.innerHTML = months.map(m => { const [y,mo] = m.split('-'); return `<option value="${m}">${new Date(y,mo-1).toLocaleString([],{month:'long',year:'numeric'})}</option>`; }).join('');
+  if (prev && months.includes(prev)) sel.value = prev;
+}
+
+function renderDashboard() {
+  const month = document.getElementById('month-sel').value;
+  const f = entries.filter(e => monthKey(e.date) === month);
+  const ppl = [...new Set(f.map(e => e.name))];
+  document.getElementById('m-total').textContent  = f.length;
+  document.getElementById('m-people').textContent = ppl.length;
+  document.getElementById('m-avg').textContent    = ppl.length ? (f.length / ppl.length).toFixed(1) : '0';
+
+  const maxO = Math.max(1, ...offices.map(o => f.filter(e => e.office === o).length));
+  document.getElementById('office-bars').innerHTML = offices.map((o,i) => {
+    const cnt = f.filter(e => e.office === o).length;
+    return `<div class="bar-row"><div class="bar-head"><span>${o}</span><span style="color:var(--text2)">${cnt} visit${cnt!==1?'s':''}</span></div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/maxO*100)}%;background:${barColor(i)}"></div></div></div>`;
+  }).join('') || '<p style="font-size:13px;color:var(--text2)">No offices configured.</p>';
+
+  const allNames = people.map(p => p.name);
+  const maxP = Math.max(1, ...allNames.map(p => f.filter(e => e.name === p).length));
+  document.getElementById('person-bars').innerHTML = allNames.map(p => {
+    const cnt = f.filter(e => e.name === p).length, pct = Math.round(cnt / maxP * 100);
+    const ob = f.filter(e => e.name === p).reduce((a,e) => { a[e.office] = (a[e.office]||0)+1; return a; }, {});
+    const top = Object.entries(ob).sort((a,b) => b[1]-a[1])[0];
+    return `<div class="person-row"><span style="font-size:13px;min-width:88px">${p}</span><div style="flex:1;height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:#378ADD;border-radius:3px;"></div></div><span style="font-size:13px;min-width:24px;text-align:right;color:var(--text2);margin:0 8px">${cnt}</span>${top?`<span class="badge ${offClass(top[0])}">${top[0]}</span>`:'<span style="min-width:60px"></span>'}</div>`;
+  }).join('') || '<p style="font-size:13px;color:var(--text2)">No team members configured.</p>';
+
+  const [y,mo] = month.split('-').map(Number), dim = new Date(y,mo,0).getDate();
+  const byDay = {}; f.forEach(e => { const d = parseInt(e.date.slice(8)); byDay[d] = (byDay[d]||0)+1; });
+  const maxDay = Math.max(1, ...Object.values(byDay));
+  document.getElementById('heatmap').innerHTML = Array.from({length:dim},(_,i) => {
+    const d = i+1, cnt = byDay[d]||0, alpha = cnt===0 ? 0.07 : 0.18+(cnt/maxDay)*0.82;
+    return `<div class="hm-day" title="Day ${d}: ${cnt} visit${cnt!==1?'s':''}" style="background:rgba(55,138,221,${alpha.toFixed(2)})">${d}</div>`;
+  }).join('');
+}
+
+// ── Log ───────────────────────────────────────────────────────────────
+function renderLog() {
+  let list = entries;
+  const fp = document.getElementById('fp').value, fo = document.getElementById('fo').value;
+  if (fp) list = list.filter(e => e.name === fp);
+  if (fo) list = list.filter(e => e.office === fo);
+  const tbody = document.getElementById('log-body'), empty = document.getElementById('log-empty');
+  if (!list.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = list.slice(0,100).map(e => {
+    if (editingId === e.id) return editRow(e);
+    const cls = offClass(e.office);
+    const sub = e.retroactive ? '<span class="badge b-retro">retro</span>' : (e.submittedTime||'');
+    const eb  = e.editedDate ? ` <span class="badge b-edit" title="Edited ${e.editedDate}">edited</span>` : '';
+    const dur = e.duration ? `<span class="badge b-duration">${e.duration}</span>` : (e.checkoutTime ? e.checkoutTime : '<span style="color:var(--text3);font-size:11px">—</span>');
+    return `<tr id="row-${e.id}">
+      <td style="font-size:12px">${e.date}<br><span style="color:var(--text2)">${e.time||''}${e.checkoutTime?' → '+e.checkoutTime:''}</span></td>
+      <td>${e.name}</td>
+      <td><span class="badge ${cls}">${e.office}</span></td>
+      <td style="font-size:12px">${dur}</td>
+      <td style="font-size:12px;color:var(--text2)">${e.notes||'—'}${eb}</td>
+      <td style="font-size:11px;color:var(--text2)">${e.submittedDate||e.date}<br>${sub}</td>
+      <td style="white-space:nowrap">
+        <button class="icon-btn" title="Edit"   onclick="startEdit('${e.id}')">✏️</button>
+        <button class="icon-btn" title="Delete" onclick="confirmDelete('${e.id}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function editRow(e) {
+  const no = offices.map(o => `<option${o===e.office?' selected':''}>${o}</option>`).join('');
+  const np = people.map(p => `<option${p.name===e.name?' selected':''}>${p.name}</option>`).join('');
+  return `<tr class="editing" id="row-${e.id}"><td colspan="6">
+    <div class="edit-panel">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">Editing — original submission: ${e.submittedDate} ${e.submittedTime||''}</div>
+      <div class="edit-fields">
+        <div class="ef"><label>Name</label><select id="e-name">${np}</select></div>
+        <div class="ef"><label>Office</label><select id="e-office">${no}</select></div>
+        <div class="ef"><label>Visit date</label><input type="date" id="e-date" value="${e.date}" /></div>
+        <div class="ef"><label>Visit time</label><input type="time" id="e-time" value="${e.time||''}" /></div>
+        <div class="ef"><label>Check-out time</label><input type="time" id="e-cout" value="${e.checkoutTime||''}" /></div>
+        <div class="ef grow"><label>Notes</label><input type="text" id="e-notes" value="${e.notes||''}" placeholder="optional" /></div>
+      </div>
+      <div class="edit-actions">
+        <button class="btn-sm btn-primary" onclick="saveEdit('${e.id}')">Save changes</button>
+        <button class="btn-sm btn-outline" onclick="cancelEdit()">Cancel</button>
+      </div>
+    </div>
+  </td></tr>`;
+}
+
+function startEdit(id)  { editingId = id;   renderLog(); }
+function cancelEdit()   { editingId = null;  renderLog(); }
+
+function saveEdit(id) {
+  const idx = entries.findIndex(e => e.id === id); if (idx < 0) return;
+  const now = new Date();
+  const newTime  = document.getElementById('e-time').value;
+  const newCout  = document.getElementById('e-cout').value;
+  const newDur   = (newTime && newCout) ? calcDuration(newTime, newCout) : null;
+  entries[idx] = { ...entries[idx],
+    name:         document.getElementById('e-name').value,
+    office:       document.getElementById('e-office').value,
+    date:         document.getElementById('e-date').value,
+    time:         newTime,
+    checkoutTime: newCout || '',
+    duration:     newDur,
+    notes:        document.getElementById('e-notes').value.trim(),
+    editedDate:   now.toISOString().slice(0,10),
+    editedTime:   now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+  };
+  entries.sort((a,b) => b.date.localeCompare(a.date) || b.ts - a.ts);
+  editingId = null; saveEntries();
+  populateMonthFilter(); renderDashboard(); renderLog();
+}
+
+function confirmDelete(id) {
+  const row = document.getElementById('row-'+id); if (!row) return;
+  if (document.getElementById('conf-'+id)) { document.getElementById('conf-'+id).remove(); return; }
+  const div = document.createElement('div'); div.id = 'conf-'+id; div.className = 'confirm-bar';
+  div.innerHTML = `<span>Delete this entry?</span>
+    <button class="btn-sm btn-danger" onclick="doDelete('${id}')">Delete</button>
+    <button class="btn-sm btn-outline" onclick="document.getElementById('conf-${id}').remove()">Cancel</button>`;
+  row.querySelector('td:last-child').appendChild(div);
+}
+
+function doDelete(id) {
+  entries = entries.filter(e => e.id !== id);
+  saveEntries(); populateMonthFilter(); renderDashboard(); renderLog();
+}
+
+function parseDurationMins(dur) {
+  if (!dur) return null;
+  const hm = dur.match(/(\d+)h\s*(\d+)m/);
+  if (hm) return parseInt(hm[1])*60 + parseInt(hm[2]);
+  const mo = dur.match(/(\d+)m/);
+  if (mo) return parseInt(mo[1]);
+  return null;
+}
+
+function fmtMins(mins) {
+  if (mins === null || isNaN(mins)) return '';
+  const h = Math.floor(mins/60), m = mins%60;
+  return h > 0 ? h+'h '+(m<10?'0':'')+m+'m' : m+'m';
+}
+
+function getWeekNumber(dateStr) {
+  const d = new Date(dateStr+'T12:00:00');
+  const jan1 = new Date(d.getFullYear(),0,1);
+  return Math.ceil(((d - jan1)/86400000 + jan1.getDay()+1)/7);
+}
+
+function exportCSV() {
+  if (!entries.length) { alert('No data to export yet.'); return; }
+
+  const rows = [];
+  const q = v => '"' + String(v===null||v===undefined?'':v).replace(/"/g,'""') + '"';
+
+  // ── SECTION 1: Monthly summary ──────────────────────────────────────
+  rows.push([q('MONTHLY SUMMARY')]);
+  rows.push([q('Month'), q('Office'), q('Person'), q('Total visits'), q('Unique days'), q('Total time in office'), q('Avg duration/visit')]);
+
+  const months = [...new Set(entries.map(e => e.date.slice(0,7)))].sort();
+  for (const month of months) {
+    const mEntries = entries.filter(e => e.date.slice(0,7) === month);
+    const monthLabel = new Date(month+'-02').toLocaleString([],{month:'long', year:'numeric'});
+    for (const office of offices) {
+      const oEntries = mEntries.filter(e => e.office === office);
+      if (!oEntries.length) continue;
+      for (const person of people) {
+        const pEntries = oEntries.filter(e => e.name === person.name);
+        if (!pEntries.length) continue;
+        const uniqueDays = new Set(pEntries.map(e => e.date)).size;
+        const durMins = pEntries.map(e => parseDurationMins(e.duration)).filter(x => x !== null);
+        const totalMins = durMins.length ? durMins.reduce((a,b)=>a+b,0) : null;
+        const avgMins = durMins.length ? Math.round(totalMins/durMins.length) : null;
+        rows.push([q(monthLabel), q(office), q(person.name), q(pEntries.length), q(uniqueDays), q(fmtMins(totalMins)), q(fmtMins(avgMins))]);
+      }
+      // Office subtotal
+      const allDurMins = oEntries.map(e => parseDurationMins(e.duration)).filter(x => x !== null);
+      const offTotal = allDurMins.length ? allDurMins.reduce((a,b)=>a+b,0) : null;
+      rows.push([q(monthLabel), q(office), q('── TOTAL'), q(oEntries.length), q(new Set(oEntries.map(e=>e.date)).size), q(fmtMins(offTotal)), q('')]);
+    }
+    rows.push([q('')]); // spacer
+  }
+
+  // ── SECTION 2: Weekly summary ────────────────────────────────────────
+  rows.push([q('')]);
+  rows.push([q('WEEKLY SUMMARY')]);
+  rows.push([q('Year'), q('Week'), q('Week dates'), q('Office'), q('Person'), q('Visits'), q('Unique days'), q('Total time')]);
+
+  // Group by year-week
+  const weekMap = {};
+  for (const e of entries) {
+    const d = new Date(e.date+'T12:00:00');
+    const yr = d.getFullYear();
+    const wk = getWeekNumber(e.date);
+    const key = yr+'-W'+(wk<10?'0':'')+wk;
+    if (!weekMap[key]) weekMap[key] = [];
+    weekMap[key].push(e);
+  }
+  for (const wk of Object.keys(weekMap).sort()) {
+    const wEntries = weekMap[wk];
+    // Get Mon-Sun label for this week
+    const firstEntry = wEntries.slice().sort((a,b)=>a.date.localeCompare(b.date))[0];
+    const d = new Date(firstEntry.date+'T12:00:00');
+    const day = d.getDay(), diff = d.getDate() - day + (day===0?-6:1);
+    const mon = new Date(d.setDate(diff));
+    const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+    const fmt = dt => dt.toLocaleDateString([],{day:'numeric',month:'short'});
+    const weekLabel = fmt(mon)+' – '+fmt(sun);
+    const [yr, wkNum] = wk.split('-W');
+
+    for (const office of offices) {
+      const oEntries = wEntries.filter(e => e.office === office);
+      if (!oEntries.length) continue;
+      for (const person of people) {
+        const pEntries = oEntries.filter(e => e.name === person.name);
+        if (!pEntries.length) continue;
+        const durMins = pEntries.map(e => parseDurationMins(e.duration)).filter(x => x !== null);
+        const totalMins = durMins.length ? durMins.reduce((a,b)=>a+b,0) : null;
+        rows.push([q(yr), q('W'+wkNum), q(weekLabel), q(office), q(person.name), q(pEntries.length), q(new Set(pEntries.map(e=>e.date)).size), q(fmtMins(totalMins))]);
+      }
+    }
+    rows.push([q('')]);
+  }
+
+  // ── SECTION 3: Raw log ───────────────────────────────────────────────
+  rows.push([q('')]);
+  rows.push([q('RAW LOG')]);
+  rows.push([q('Visit date'),q('Check-in'),q('Check-out'),q('Duration'),q('Name'),q('Office'),q('Notes'),q('Submitted date'),q('Submitted time'),q('Retroactive'),q('Edited date'),q('Edited time')]);
+  for (const e of entries) {
+    rows.push([q(e.date),q(e.time||''),q(e.checkoutTime||''),q(e.duration||''),q(e.name),q(e.office),q(e.notes||''),q(e.submittedDate||e.date),q(e.submittedTime||''),q(e.retroactive?'yes':'no'),q(e.editedDate||''),q(e.editedTime||'')]);
+  }
+
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const month = new Date().toISOString().slice(0,7);
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = 'office_presence_'+month+'.csv';
+  a.click();
+}
+
+// ── Settings ──────────────────────────────────────────────────────────
+function renderPeopleSettings() {
+  const offOpts = offices.map(o => `<option>${o}</option>`).join('');
+  document.getElementById('add-person-office').innerHTML = '<option value="">No office tag</option>' + offOpts;
+  document.getElementById('people-list').innerHTML = people.map((p,i) => `
+    <div class="settings-item" id="pi-${i}">
+      <span>${p.name}${p.office?` <span style="font-size:11px;color:var(--text2)">(${p.office})</span>`:''}</span>
+      <button class="icon-btn" onclick="editPerson(${i})" title="Edit">✏️</button>
+      <button class="icon-btn" onclick="removePerson(${i})" title="Remove">🗑</button>
+    </div>`).join('') || '<p style="font-size:13px;color:var(--text2);padding:6px 0">No team members yet.</p>';
+}
+
+function renderOfficeSettings() {
+  document.getElementById('office-list').innerHTML = offices.map((o,i) => `
+    <div class="settings-item" id="oi-${i}">
+      <span>${o}</span>
+      <button class="icon-btn" onclick="editOffice(${i})" title="Edit">✏️</button>
+      <button class="icon-btn" onclick="removeOffice(${i})" title="Remove">🗑</button>
+    </div>`).join('') || '<p style="font-size:13px;color:var(--text2);padding:6px 0">No offices yet.</p>';
+}
+
+function editPerson(i) {
+  const el = document.getElementById('pi-'+i), p = people[i];
+  const offOpts = ['<option value="">No office tag</option>',...offices.map(o=>`<option${o===p.office?' selected':''}>${o}</option>`)].join('');
+  el.innerHTML = `<input type="text" id="ep-n-${i}" value="${p.name}" style="flex:1;padding:5px 8px" />
+    <select id="ep-o-${i}" style="width:auto;padding:5px 8px">${offOpts}</select>
+    <button class="btn-sm btn-primary" onclick="savePerson(${i})">Save</button>
+    <button class="btn-sm btn-outline" onclick="renderPeopleSettings()">Cancel</button>`;
+}
+function savePerson(i) {
+  const n = document.getElementById('ep-n-'+i).value.trim(); if(!n) return;
+  people[i] = { name: n, office: document.getElementById('ep-o-'+i).value };
+  saveSettings(); flash('people-flash'); renderAll();
+}
+function removePerson(i) {
+  if (!confirm('Remove ' + people[i].name + '?')) return;
+  people.splice(i,1); saveSettings(); renderAll();
+}
+function addPerson() {
+  const n = document.getElementById('add-person').value.trim(); if(!n) return;
+  const o = document.getElementById('add-person-office').value;
+  people.push({name:n, office:o});
+  document.getElementById('add-person').value = '';
+  saveSettings(); flash('people-flash'); renderAll();
+}
+
+function editOffice(i) {
+  const el = document.getElementById('oi-'+i);
+  el.innerHTML = `<input type="text" id="eo-${i}" value="${offices[i]}" style="flex:1;padding:5px 8px" />
+    <button class="btn-sm btn-primary" onclick="saveOffice(${i})">Save</button>
+    <button class="btn-sm btn-outline" onclick="renderOfficeSettings()">Cancel</button>`;
+}
+function saveOffice(i) {
+  const n = document.getElementById('eo-'+i).value.trim(); if(!n) return;
+  offices[i] = n; saveSettings(); flash('office-flash'); renderAll();
+}
+function removeOffice(i) {
+  if (!confirm('Remove ' + offices[i] + '?')) return;
+  offices.splice(i,1); saveSettings(); renderAll();
+}
+function addOffice() {
+  const n = document.getElementById('add-office').value.trim(); if(!n) return;
+  offices.push(n);
+  document.getElementById('add-office').value = '';
+  saveSettings(); flash('office-flash'); renderAll();
+}
+
+function changePin() {
+  const p1 = document.getElementById('new-pin').value, p2 = document.getElementById('new-pin2').value;
+  const err = document.getElementById('pin-err');
+  if (!p1 || p1.length < 4) { err.textContent = 'PIN must be at least 4 digits.'; err.style.display='block'; return; }
+  if (p1 !== p2) { err.textContent = 'PINs do not match.'; err.style.display='block'; return; }
+  err.style.display = 'none';
+  adminPin = p1; localStorage.setItem('opt_pin', adminPin);
+  document.getElementById('new-pin').value = document.getElementById('new-pin2').value = '';
+  flash('pin-flash');
+}
+
+function copySchema() {
+  const text = document.getElementById('json-schema').textContent;
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+function changeAppPassword() {
+  const p1 = document.getElementById('new-apppass').value;
+  const p2 = document.getElementById('new-apppass2').value;
+  const err = document.getElementById('apppass-err');
+  if (!p1 || p1.length < 4) { err.textContent = 'Password must be at least 4 characters.'; err.style.display='block'; return; }
+  if (p1 !== p2) { err.textContent = 'Passwords do not match.'; err.style.display='block'; return; }
+  err.style.display = 'none';
+  appPassword = p1;
+  localStorage.setItem('opt_apppass', appPassword);
+  document.getElementById('new-apppass').value = document.getElementById('new-apppass2').value = '';
+  flash('apppass-flash');
+}
+
+function signOut() {
+  sessionStorage.removeItem('opt_session');
+  appUnlocked = false;
+  settingsUnlocked = false;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-input').disabled = false;
+  document.getElementById('login-input').value = '';
+  document.getElementById('login-err').textContent = '';
+  loginAttempts = 0;
+  switchTab('checkin');
+}
+
+function flash(id) { const el = document.getElementById(id); el.style.display='block'; setTimeout(()=>el.style.display='none',2000); }
+
+// ── PIN / tab switching ───────────────────────────────────────────────
+function switchTab(t) {
+  if (t === 'settings' && !settingsUnlocked) { showPinOverlay(); return; }
+  ['checkin','dashboard','log','settings'].forEach((id,i) => {
+    document.getElementById('tab-'+id).style.display = id===t ? 'block' : 'none';
+    document.querySelectorAll('.tab')[i].classList.toggle('active', id===t);
+  });
+  if (t === 'dashboard') renderDashboard();
+  if (t === 'log')       renderLog();
+}
+
+function showPinOverlay() {
+  document.getElementById('pin-overlay').style.display = 'flex';
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-err-msg').style.display = 'none';
+  setTimeout(() => document.getElementById('pin-input').focus(), 50);
+}
+function closePinOverlay() { document.getElementById('pin-overlay').style.display = 'none'; }
+function checkPin() {
+  if (document.getElementById('pin-input').value === adminPin) {
+    settingsUnlocked = true;
+    closePinOverlay();
+    switchTab('settings');
+  } else {
+    document.getElementById('pin-err-msg').style.display = 'block';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────
+load();
+</script>
+</body>
+</html>
